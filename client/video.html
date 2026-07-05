@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+  <title>Génération Vidéo IA — Dahomey Chat</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green-dark:  #0B4D2E;
+      --green-main:  #128C7E;
+      --green-light: #25D366;
+      --gold:        #D4A017;
+      --gold-light:  #F0C040;
+      --bg:          #ECE5DD;
+      --surface:     #FFFFFF;
+      --text:        #111B21;
+      --text-muted:  #667781;
+      --error:       #E53935;
+      --radius:      16px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--green-dark);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 20px;
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 2px 8px rgba(0,0,0,.3);
+    }
+    header button.back {
+      background: none;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      transition: background .15s;
+    }
+    header button.back:hover { background: rgba(255,255,255,.15); }
+    header .title-block { flex: 1; }
+    header h1 { font-size: 1.05rem; font-weight: 600; letter-spacing: .3px; }
+    header p  { font-size: .75rem; color: rgba(255,255,255,.65); margin-top: 1px; }
+    header .badge {
+      background: var(--gold);
+      color: #fff;
+      font-size: .7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 20px;
+      letter-spacing: .5px;
+      text-transform: uppercase;
+    }
+
+    /* ── Main ── */
+    main {
+      flex: 1;
+      max-width: 720px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px 16px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    }
+
+    .card h2 {
+      font-size: .9rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      margin-bottom: 14px;
+    }
+
+    /* ── Textarea ── */
+    .prompt-area {
+      width: 100%;
+      min-height: 130px;
+      border: 2px solid #E2E8EA;
+      border-radius: 12px;
+      padding: 14px;
+      font-family: 'Inter', sans-serif;
+      font-size: .95rem;
+      color: var(--text);
+      resize: vertical;
+      outline: none;
+      transition: border-color .2s;
+      line-height: 1.5;
+    }
+    .prompt-area:focus { border-color: var(--green-main); }
+    .prompt-area::placeholder { color: #aab; }
+
+    .char-count {
+      font-size: .75rem;
+      color: var(--text-muted);
+      text-align: right;
+      margin-top: 6px;
+    }
+
+    /* ── Tips ── */
+    .tips {
+      background: #F0FBF7;
+      border-left: 3px solid var(--green-main);
+      border-radius: 0 8px 8px 0;
+      padding: 10px 14px;
+      font-size: .8rem;
+      color: var(--green-dark);
+      line-height: 1.6;
+    }
+    .tips strong { display: block; margin-bottom: 4px; }
+
+    /* ── Buttons ── */
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: none;
+      border-radius: 24px;
+      padding: 12px 24px;
+      font-family: 'Inter', sans-serif;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform .1s, opacity .2s, box-shadow .2s;
+      text-decoration: none;
+    }
+    .btn:active { transform: scale(.97); }
+
+    .btn-primary {
+      background: var(--green-dark);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(11,77,46,.3);
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: #0d5c37;
+      box-shadow: 0 4px 14px rgba(11,77,46,.35);
+    }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+    .btn-gold {
+      background: var(--gold);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(212,160,23,.35);
+    }
+    .btn-gold:hover { background: #c4930e; }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--green-dark);
+      border: 2px solid var(--green-dark);
+    }
+    .btn-outline:hover { background: #f0faf5; }
+
+    .btn-danger {
+      background: transparent;
+      color: var(--error);
+      border: 2px solid var(--error);
+    }
+    .btn-danger:hover { background: #fff0f0; }
+
+    /* ── Status / Loader ── */
+    .status-card { text-align: center; }
+
+    .spinner-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 0;
+    }
+
+    .spinner {
+      width: 56px; height: 56px;
+      border: 5px solid #E2E8EA;
+      border-top-color: var(--green-main);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .status-text {
+      font-size: .95rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .status-sub {
+      font-size: .8rem;
+      color: #aab;
+      margin-top: 4px;
+    }
+
+    .progress-bar-wrap {
+      width: 100%;
+      max-width: 300px;
+      background: #E2E8EA;
+      border-radius: 6px;
+      height: 6px;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--green-main), var(--green-light));
+      border-radius: 6px;
+      transition: width .4s ease;
+      animation: indeterminate 1.8s ease infinite;
+    }
+    @keyframes indeterminate {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(400%); }
+    }
+
+    /* ── Error ── */
+    .error-box {
+      background: #FFF3F3;
+      border: 1px solid #FECACA;
+      border-radius: 10px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: .87rem;
+      color: #991B1B;
+      line-height: 1.5;
+    }
+    .error-box .icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+
+    /* ── Video player ── */
+    .video-wrap {
+      position: relative;
+      background: #000;
+      border-radius: 14px;
+      overflow: hidden;
+      max-height: 420px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .video-wrap video {
+      width: 100%;
+      max-height: 420px;
+      display: block;
+      object-fit: contain;
+    }
+
+    .video-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 500px) {
+      .btn { padding: 11px 18px; font-size: .85rem; }
+      main { padding: 16px 10px 32px; }
+    }
+
+    /* ── Hidden utility ── */
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<!-- ══════ HEADER ══════ -->
+<header>
+  <button class="back" onclick="history.length > 1 ? history.back() : location.href='/'" aria-label="Retour">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="15 18 9 12 15 6"/>
+    </svg>
+  </button>
+  <div class="title-block">
+    <h1>Génération Vidéo IA</h1>
+    <p>Créez des vidéos réalistes en français</p>
+  </div>
+  <span class="badge">IA</span>
+</header>
+
+<!-- ══════ MAIN ══════ -->
+<main>
+
+  <!-- Prompt -->
+  <div class="card" id="promptCard">
+    <h2>📝 Votre prompt</h2>
+
+    <textarea
+      id="prompt"
+      class="prompt-area"
+      placeholder="Décrivez votre vidéo en français…&#10;Ex : Une femme en tenue traditionnelle béninoise marche dans un marché coloré au coucher du soleil, caméra lente, qualité cinématographique."
+      maxlength="500"
+    ></textarea>
+    <div class="char-count"><span id="charCount">0</span> / 500 caractères</div>
+
+    <div class="tips" style="margin-top:14px;">
+      <strong>💡 Conseils pour de meilleurs résultats</strong>
+      Décrivez la scène, les mouvements de caméra, l'ambiance et la qualité souhaitée.
+      Ex : « plan rapproché », « lumière dorée », « haute qualité cinématographique ».
+    </div>
+
+    <div class="btn-row" style="margin-top:18px;">
+      <button id="generateBtn" class="btn btn-primary" onclick="startGeneration()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Générer la vidéo
+      </button>
+    </div>
+  </div>
+
+  <!-- Statut / Loader -->
+  <div class="card status-card hidden" id="statusCard">
+    <div class="spinner-wrap" id="loadingBlock">
+      <div class="spinner"></div>
+      <div>
+        <p class="status-text" id="statusText">Initialisation…</p>
+        <p class="status-sub" id="statusSub">Cela peut prendre 1 à 3 minutes</p>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+    </div>
+
+    <!-- Erreur -->
+    <div class="error-box hidden" id="errorBox">
+      <span class="icon">⚠️</span>
+      <span id="errorMsg">Une erreur est survenue.</span>
+    </div>
+  </div>
+
+  <!-- Résultat vidéo -->
+  <div class="card hidden" id="resultCard">
+    <h2>🎬 Vidéo générée</h2>
+    <div class="video-wrap">
+      <video id="videoPlayer" controls autoplay loop playsinline></video>
+    </div>
+    <div class="video-actions">
+      <a id="downloadBtn" class="btn btn-gold" download="dahomey-video.mp4">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Télécharger la vidéo
+      </a>
+      <button class="btn btn-outline" onclick="newGeneration()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+        Nouvelle vidéo
+      </button>
+      <button class="btn btn-danger" onclick="clearAll()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+        Effacer
+      </button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+/* ── État ── */
+let pollTimer = null;
+let currentPredictionId = null;
+
+/* ── Compteur de caractères ── */
+document.getElementById('prompt').addEventListener('input', function () {
+  document.getElementById('charCount').textContent = this.value.length;
+});
+
+/* ── Lancer la génération ── */
+async function startGeneration() {
+  const prompt = document.getElementById('prompt').value.trim();
+  if (!prompt) {
+    alert('Veuillez entrer un prompt avant de générer.');
+    return;
+  }
+
+  setLoading(true, 'Envoi du prompt à l\'IA…', 'Initialisation de la génération');
+  show('statusCard');
+  hide('resultCard');
+  hide('errorBox');
+
+  document.getElementById('generateBtn').disabled = true;
+
+  try {
+    const res = await fetch('/api/generate-video', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      showError(data.error || 'Erreur lors du démarrage de la génération.');
+      return;
+    }
+
+    if (data.status === 'succeeded' && data.output) {
+      // Réponse immédiate (predict=wait)
+      showVideo(data.output);
+      return;
+    }
+
+    currentPredictionId = data.id;
+    pollStatus(data.id);
+
+  } catch (err) {
+    showError('Erreur réseau : ' + err.message);
+  }
+}
+
+/* ── Polling ── */
+function pollStatus(id) {
+  let elapsed = 0;
+  const STATUSES = [
+    'Analyse du prompt…',
+    'Génération des images clés…',
+    'Rendu des frames…',
+    'Assemblage de la vidéo…',
+    'Finalisation…',
+  ];
+
+  const tick = async () => {
+    elapsed += 6;
+    const label = STATUSES[Math.min(Math.floor(elapsed / 20), STATUSES.length - 1)];
+    setLoading(true, label, `${elapsed} secondes écoulées`);
+
+    try {
+      const res = await fetch(`/api/video-status/${id}`);
+      const data = await res.json();
+
+      if (data.status === 'succeeded') {
+        const url = Array.isArray(data.output) ? data.output[0] : data.output;
+        showVideo(url);
+      } else if (data.status === 'failed' || data.error) {
+        showError(data.error || 'La génération a échoué.');
+      } else {
+        pollTimer = setTimeout(tick, 6000);
+      }
+    } catch (err) {
+      showError('Erreur réseau pendant le polling : ' + err.message);
+    }
+  };
+
+  pollTimer = setTimeout(tick, 6000);
+}
+
+/* ── Afficher la vidéo ── */
+function showVideo(url) {
+  clearTimeout(pollTimer);
+  hide('statusCard');
+  show('resultCard');
+  document.getElementById('generateBtn').disabled = false;
+
+  const player = document.getElementById('videoPlayer');
+  player.src = url;
+  player.load();
+  player.play().catch(() => {});
+
+  const dl = document.getElementById('downloadBtn');
+  dl.href = url;
+}
+
+/* ── Afficher une erreur ── */
+function showError(msg) {
+  clearTimeout(pollTimer);
+  document.getElementById('generateBtn').disabled = false;
+  show('statusCard');
+  hide('loadingBlock');
+  show('errorBox');
+  document.getElementById('errorMsg').textContent = msg;
+}
+
+/* ── Nouvelle génération ── */
+function newGeneration() {
+  hide('resultCard');
+  hide('statusCard');
+  document.getElementById('prompt').focus();
+}
+
+/* ── Tout effacer ── */
+function clearAll() {
+  clearTimeout(pollTimer);
+  document.getElementById('prompt').value = '';
+  document.getElementById('charCount').textContent = '0';
+  document.getElementById('generateBtn').disabled = false;
+  const player = document.getElementById('videoPlayer');
+  player.pause();
+  player.src = '';
+  hide('resultCard');
+  hide('statusCard');
+}
+
+/* ── Helpers ── */
+function setLoading(active, text, sub) {
+  document.getElementById('loadingBlock').classList.toggle('hidden', !active);
+  document.getElementById('statusText').textContent = text || '';
+  document.getElementById('statusSub').textContent  = sub  || '';
+}
+
+function show(id) { document.getElementById(id).classList.remove('hidden'); }
+function hide(id) { document.getElementById(id).classList.add('hidden'); }
+</script>
+
+</body>
+</html>

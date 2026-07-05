@@ -21,5 +21,104 @@
   </head>
   <body>
     <div id="root"></div>
+
+    <style>
+      /* Bouton injecté dans le panel Paramètres (après mot de passe correct) */
+      .vg-inject-btn {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: calc(100% - 32px);
+        margin: 16px 16px 0 16px;
+        background: linear-gradient(135deg, #0B4D2E, #128C7E);
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        padding: 14px 18px;
+        font-family: 'Inter', sans-serif;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 3px 10px rgba(11,77,46,.35);
+        transition: opacity .15s, transform .1s;
+        text-align: left;
+        letter-spacing: .2px;
+      }
+      .vg-inject-btn:hover  { opacity: .88; }
+      .vg-inject-btn:active { transform: scale(.97); }
+      .vg-inject-btn .vg-badge {
+        background: #D4A017;
+        font-size: 10px;
+        font-weight: 800;
+        padding: 3px 7px;
+        border-radius: 12px;
+        letter-spacing: .6px;
+        text-transform: uppercase;
+        margin-left: auto;
+        flex-shrink: 0;
+      }
+    </style>
+
+    <!--
+      Injection du bouton "Générer une vidéo" UNIQUEMENT dans la zone
+      Paramètres, APRÈS que le mot de passe correct ait été validé.
+      La classe React 'settings-enter' n'existe dans le DOM que lorsque
+      l'authentification admin a réussi.
+      Aucun bouton flottant global — uniquement dans Paramètres.
+    -->
+    <script>
+    (function () {
+      'use strict';
+
+      var BTN_ID = 'vg-inject-btn';
+
+      function makeBtn() {
+        var b = document.createElement('button');
+        b.id  = BTN_ID;
+        b.className = 'vg-inject-btn';
+        b.setAttribute('title', 'Générer une vidéo réaliste avec l\'IA');
+        b.innerHTML =
+          '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" ' +
+          'stroke="currentColor" stroke-width="2.5" stroke-linecap="round" ' +
+          'stroke-linejoin="round" style="flex-shrink:0">' +
+          '<polygon points="23 7 16 12 23 17 23 7"/>' +
+          '<rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>' +
+          '</svg>' +
+          '<span>G\u00e9n\u00e9rer une vid\u00e9o r\u00e9aliste</span>' +
+          '<span class="vg-badge">IA</span>';
+        b.addEventListener('click', function () {
+          window.location.href = '/video';
+        });
+        return b;
+      }
+
+      function tryInject() {
+        // Si le bouton est déjà dans le DOM, on ne fait rien
+        if (document.getElementById(BTN_ID)) return;
+
+        // .settings-enter existe SEULEMENT après validation du mot de passe admin
+        var panel = document.querySelector('.settings-enter');
+        if (!panel) return;
+
+        // On place le bouton en tête du panel (juste sous le header photo)
+        // Le premier enfant est la bannière photo — on insère après
+        var firstChild = panel.firstElementChild;
+        if (firstChild) {
+          panel.insertBefore(makeBtn(), firstChild.nextSibling);
+        } else {
+          panel.appendChild(makeBtn());
+        }
+      }
+
+      // Observer permanent : déclenché à chaque changement du DOM
+      var obs = new MutationObserver(function () {
+        tryInject();
+      });
+      obs.observe(document.body, { childList: true, subtree: true });
+
+      // Tentative immédiate
+      tryInject();
+    })();
+    </script>
   </body>
 </html>
