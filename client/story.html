@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+  <title>Générateur d'Histoires — Dahomey Chat</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,600;1,400&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --green-dark: #0B4D2E;
+      --green-main: #128C7E;
+      --green-light: #25D366;
+      --gold: #D4A017;
+      --gold-light: #F0C040;
+      --bg: #ECE5DD;
+      --surface: #FFFFFF;
+      --text: #111B21;
+      --text-muted: #667781;
+      --error: #E53935;
+      --radius: 16px;
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; }
+
+    header {
+      background: var(--green-dark); color: #fff;
+      display: flex; align-items: center; gap: 12px;
+      padding: 0 20px; height: 60px;
+      position: sticky; top: 0; z-index: 10;
+      box-shadow: 0 2px 8px rgba(0,0,0,.3);
+    }
+    header button.back { background: none; border: none; color: #fff; cursor: pointer; padding: 8px; border-radius: 50%; display: flex; align-items: center; }
+    header button.back:hover { background: rgba(255,255,255,.15); }
+    header .title-block { flex: 1; }
+    header h1 { font-size: 1.05rem; font-weight: 600; }
+    header p  { font-size: .75rem; color: rgba(255,255,255,.65); margin-top: 1px; }
+    header .badge { background: var(--gold); color: #fff; font-size: .7rem; font-weight: 700; padding: 3px 8px; border-radius: 20px; text-transform: uppercase; }
+
+    main { flex: 1; max-width: 760px; width: 100%; margin: 0 auto; padding: 24px 16px 60px; display: flex; flex-direction: column; gap: 20px; }
+
+    .card { background: var(--surface); border-radius: var(--radius); padding: 22px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    .card-title { font-size: .85rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 16px; }
+
+    label { display: block; font-size: .85rem; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    input[type="text"], input[type="number"], textarea, select {
+      width: 100%; border: 2px solid #E2E8EA; border-radius: 10px;
+      padding: 10px 13px; font-family: 'Inter', sans-serif; font-size: .9rem;
+      color: var(--text); outline: none; transition: border-color .2s;
+    }
+    input[type="text"]:focus, input[type="number"]:focus, textarea:focus, select:focus { border-color: var(--green-main); }
+    input::placeholder, textarea::placeholder { color: #aab; }
+    textarea { resize: vertical; line-height: 1.7; }
+
+    .field { margin-bottom: 14px; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    @media (max-width: 500px) { .row2, .row3 { grid-template-columns: 1fr; } }
+
+    .chars-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .char-tag {
+      display: flex; align-items: center; gap: 6px;
+      background: #e8f8f2; border: 1.5px solid #A8DAC3; border-radius: 20px;
+      padding: 4px 12px 4px 14px; font-size: .82rem; font-weight: 600; color: var(--green-dark);
+    }
+    .char-tag button { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 1rem; line-height: 1; padding: 0 2px; }
+    .char-tag button:hover { color: var(--error); }
+    .char-input-row { display: flex; gap: 8px; margin-top: 8px; }
+    .char-input-row input { flex: 1; }
+
+    .btn { display: inline-flex; align-items: center; gap: 8px; border: none; border-radius: 24px; padding: 12px 24px; font-family: 'Inter', sans-serif; font-size: .9rem; font-weight: 600; cursor: pointer; transition: transform .1s, opacity .2s; text-decoration: none; }
+    .btn:active { transform: scale(.97); }
+    .btn-primary { background: var(--green-dark); color: #fff; box-shadow: 0 2px 8px rgba(11,77,46,.3); }
+    .btn-primary:hover:not(:disabled) { background: #0d5c37; }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-gold { background: var(--gold); color: #fff; box-shadow: 0 2px 8px rgba(212,160,23,.35); }
+    .btn-gold:hover:not(:disabled) { background: #c4930e; }
+    .btn-gold:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-outline { background: transparent; color: var(--green-dark); border: 2px solid var(--green-dark); }
+    .btn-outline:hover { background: #f0faf5; }
+    .btn-sm { padding: 8px 16px; font-size: .82rem; }
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+
+    .spinner-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 24px 0; }
+    .spinner { width: 48px; height: 48px; border: 5px solid #E2E8EA; border-top-color: var(--green-main); border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-box { background: #FFF3F3; border: 1px solid #FECACA; border-radius: 10px; padding: 12px 16px; display: flex; align-items: flex-start; gap: 8px; font-size: .87rem; color: #991B1B; margin-top: 12px; }
+
+    /* Progress episodes */
+    .episode-progress {
+      display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px;
+    }
+    .ep-dot {
+      width: 32px; height: 32px; border-radius: 50%; border: 2px solid #D6EFE8;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .75rem; font-weight: 700; color: var(--text-muted);
+      background: #fff; cursor: pointer; transition: all .2s;
+    }
+    .ep-dot.done   { background: var(--green-main); border-color: var(--green-main); color: #fff; }
+    .ep-dot.active { background: var(--green-dark); border-color: var(--green-dark); color: #fff; }
+
+    /* Episode text */
+    .ep-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .ep-badge { background: var(--green-dark); color: #fff; font-size: .75rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; white-space: nowrap; }
+    .ep-title { font-size: 1.05rem; font-weight: 700; color: var(--text); font-family: 'Lora', serif; }
+    .ep-subtitle { font-size: .82rem; color: var(--text-muted); margin-top: 2px; }
+
+    #episodeTextarea {
+      width: 100%; min-height: 280px;
+      border: 2px solid #E2E8EA; border-radius: 12px;
+      padding: 16px; font-family: 'Lora', serif; font-size: .95rem;
+      color: var(--text); line-height: 1.8; outline: none;
+      transition: border-color .2s;
+    }
+    #episodeTextarea:focus { border-color: var(--green-main); }
+
+    .ep-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+    .ep-nav .left { display: flex; gap: 8px; }
+    .ep-nav .right { display: flex; gap: 8px; align-items: center; }
+
+    .final-banner {
+      background: linear-gradient(135deg, #0B4D2E, #1a7a48);
+      border-radius: 12px; padding: 20px; text-align: center;
+      color: #fff; margin-top: 8px;
+    }
+    .final-banner h3 { font-size: 1.1rem; margin-bottom: 6px; }
+    .final-banner p { font-size: .85rem; opacity: .8; margin-bottom: 16px; }
+
+    .hidden { display: none !important; }
+
+    .info-tip { background: #F0FBF7; border-left: 3px solid var(--green-main); border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: .8rem; color: var(--green-dark); line-height: 1.6; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <button class="back" onclick="goBack()" aria-label="Retour">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <div class="title-block">
+    <h1>Générateur d'Histoires</h1>
+    <p id="headerSub">Configurez votre série par épisodes</p>
+  </div>
+  <span class="badge">IA</span>
+</header>
+
+<main>
+
+  <!-- ══ PHASE 1 : CONFIGURATION ══ -->
+  <div id="configPhase">
+    <div class="card">
+      <div class="info-tip">
+        📖 Configurez votre histoire, puis générez chaque épisode un par un. Vous pouvez modifier le texte avant de passer au suivant. Le dernier épisode conclut l'histoire avec un téléchargement PDF.
+      </div>
+      <p class="card-title">📚 Configuration de l'histoire</p>
+
+      <div class="row2">
+        <div class="field">
+          <label for="storyTitle">Titre de la série *</label>
+          <input type="text" id="storyTitle" placeholder="ex: Villa Belle Vie" maxlength="60" />
+        </div>
+        <div class="field">
+          <label for="storyCity">Ville / Lieu</label>
+          <input type="text" id="storyCity" placeholder="ex: Cotonou, Bénin" maxlength="60" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="storySynopsis">Résumé / Contenu de l'histoire *</label>
+        <textarea id="storySynopsis" rows="4" placeholder="Décrivez le thème, l'intrigue principale, l'ambiance…" maxlength="600"></textarea>
+      </div>
+
+      <div class="row3">
+        <div class="field">
+          <label for="episodeCount">Nombre d'épisodes</label>
+          <select id="episodeCount">
+            <option value="1">1 épisode</option>
+            <option value="2">2 épisodes</option>
+            <option value="3" selected>3 épisodes</option>
+            <option value="4">4 épisodes</option>
+            <option value="5">5 épisodes</option>
+            <option value="6">6 épisodes</option>
+            <option value="7">7 épisodes (max)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="paragraphCount">Paragraphes / épisode</label>
+          <select id="paragraphCount">
+            <option value="2">2 paragraphes</option>
+            <option value="3" selected>3 paragraphes</option>
+            <option value="4">4 paragraphes</option>
+            <option value="5">5 paragraphes</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="charsPerParagraph">Caractères / paragraphe</label>
+          <select id="charsPerParagraph">
+            <option value="100">~100 caractères</option>
+            <option value="150">~150 caractères</option>
+            <option value="200" selected>~200 caractères</option>
+            <option value="300">~300 caractères</option>
+            <option value="400">~400 caractères</option>
+            <option value="500">~500 caractères</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Personnages</label>
+        <div class="char-input-row">
+          <input type="text" id="charInput" placeholder="Nom du personnage" maxlength="40" onkeydown="if(event.key==='Enter'){event.preventDefault();addChar();}" />
+          <button class="btn btn-outline btn-sm" onclick="addChar()">Ajouter</button>
+        </div>
+        <div class="chars-tags" id="charsTags"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="startStory()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Commencer l'histoire
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PHASE 2 : ÉPISODES ══ -->
+  <div id="episodePhase" class="hidden">
+
+    <!-- Progression -->
+    <div class="card" id="progressCard">
+      <p class="card-title">📖 Progression — <span id="storyTitleDisplay"></span></p>
+      <div class="episode-progress" id="episodeDots"></div>
+    </div>
+
+    <!-- Contenu épisode -->
+    <div class="card" id="episodeCard">
+      <div class="ep-header">
+        <span class="ep-badge" id="epBadge">Épisode 1</span>
+        <div>
+          <div class="ep-title" id="epTitle"></div>
+          <div class="ep-subtitle" id="epSubtitle"></div>
+        </div>
+      </div>
+
+      <!-- Loader -->
+      <div id="epLoader" class="hidden">
+        <div class="spinner-wrap">
+          <div class="spinner"></div>
+          <p style="font-size:.9rem;color:var(--text-muted)">Génération de l'épisode en cours…</p>
+        </div>
+      </div>
+
+      <!-- Erreur -->
+      <div class="error-box hidden" id="epError">
+        <span>⚠️</span><span id="epErrorMsg"></span>
+      </div>
+
+      <!-- Textarea -->
+      <textarea id="episodeTextarea" placeholder="Le contenu de l'épisode apparaîtra ici…" class="hidden"></textarea>
+
+      <!-- Bouton générer si pas encore généré -->
+      <div id="generateEpBtn" class="hidden" style="margin-top:12px">
+        <button class="btn btn-outline" onclick="generateCurrentEpisode()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Générer cet épisode
+        </button>
+      </div>
+
+      <!-- Navigation -->
+      <div class="ep-nav" id="epNav">
+        <div class="left">
+          <button class="btn btn-outline btn-sm" onclick="goToPrevEpisode()" id="prevBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+            Précédent
+          </button>
+        </div>
+        <div class="right">
+          <button class="btn btn-outline btn-sm" onclick="regenerateEpisode()" id="regenBtn" title="Régénérer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+            Régénérer
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="goToNextEpisode()" id="nextBtn">
+            Suivant
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <button class="btn btn-gold btn-sm hidden" onclick="downloadPDF()" id="pdfBtn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Télécharger en PDF
+          </button>
+        </div>
+      </div>
+
+      <!-- Final banner (shown on last episode after generation) -->
+      <div class="final-banner hidden" id="finalBanner">
+        <h3>🎉 Histoire complète !</h3>
+        <p>Tous les épisodes sont écrits. Téléchargez votre histoire en PDF.</p>
+        <button class="btn btn-gold" onclick="downloadPDF()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Télécharger en PDF
+        </button>
+        <div style="margin-top:10px">
+          <button class="btn btn-outline" onclick="restartStory()" style="color:#fff;border-color:rgba(255,255,255,.5)">
+            Nouvelle histoire
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+/* ════ État ════ */
+let config = {};
+let episodes = [];      // episodes[i] = { content: string, generated: bool }
+let currentEp = 0;      // 0-based index
+let characters = [];
+
+/* ════ Gestion des personnages ════ */
+function addChar() {
+  const input = document.getElementById('charInput');
+  const name = input.value.trim();
+  if (!name || characters.includes(name)) { input.value = ''; return; }
+  characters.push(name);
+  renderCharTags();
+  input.value = '';
+}
+
+function removeChar(name) {
+  characters = characters.filter(c => c !== name);
+  renderCharTags();
+}
+
+function renderCharTags() {
+  const container = document.getElementById('charsTags');
+  container.innerHTML = characters.map(c => `
+    <div class="char-tag">
+      ${c}
+      <button onclick="removeChar('${c.replace(/'/g, "\\'")}')">×</button>
+    </div>
+  `).join('');
+}
+
+/* ════ Démarrer l'histoire ════ */
+function startStory() {
+  const title = document.getElementById('storyTitle').value.trim();
+  const synopsis = document.getElementById('storySynopsis').value.trim();
+  if (!title) { alert('Veuillez saisir un titre.'); return; }
+  if (!synopsis) { alert('Veuillez décrire le contenu de l\'histoire.'); return; }
+
+  config = {
+    title,
+    synopsis,
+    city: document.getElementById('storyCity').value.trim() || 'Cotonou, Bénin',
+    totalEpisodes: parseInt(document.getElementById('episodeCount').value),
+    paragraphCount: parseInt(document.getElementById('paragraphCount').value),
+    charsPerParagraph: parseInt(document.getElementById('charsPerParagraph').value),
+    characters: [...characters],
+  };
+
+  episodes = Array.from({ length: config.totalEpisodes }, () => ({ content: '', generated: false }));
+  currentEp = 0;
+
+  document.getElementById('configPhase').classList.add('hidden');
+  document.getElementById('episodePhase').classList.remove('hidden');
+  document.getElementById('storyTitleDisplay').textContent = config.title;
+  document.getElementById('headerSub').textContent = `${config.title} — ${config.totalEpisodes} épisode${config.totalEpisodes > 1 ? 's' : ''}`;
+
+  renderDots();
+  renderEpisode(0);
+  generateCurrentEpisode();
+}
+
+/* ════ Rendu des points de progression ════ */
+function renderDots() {
+  const container = document.getElementById('episodeDots');
+  container.innerHTML = episodes.map((ep, i) => `
+    <div class="ep-dot ${ep.generated ? 'done' : ''} ${i === currentEp ? 'active' : ''}"
+      onclick="jumpToEpisode(${i})" title="Épisode ${i+1}">
+      ${i + 1}
+    </div>
+  `).join('');
+}
+
+/* ════ Afficher un épisode ════ */
+function renderEpisode(idx) {
+  const ep = episodes[idx];
+  const isLast = idx === config.totalEpisodes - 1;
+
+  document.getElementById('epBadge').textContent = `Épisode ${idx + 1} / ${config.totalEpisodes}`;
+  document.getElementById('epTitle').textContent = config.title;
+  document.getElementById('epSubtitle').textContent = `${config.city} • ${config.paragraphCount} paragraphes`;
+
+  const textarea = document.getElementById('episodeTextarea');
+  textarea.value = ep.content;
+
+  hide('epLoader');
+  hide('epError');
+  hide('generateEpBtn');
+  hide('finalBanner');
+
+  if (ep.generated) {
+    show('episodeTextarea');
+    if (isLast) {
+      show('finalBanner');
+    }
+  } else {
+    hide('episodeTextarea');
+    show('generateEpBtn');
+  }
+
+  document.getElementById('prevBtn').disabled = (idx === 0);
+  document.getElementById('prevBtn').style.display = idx === 0 ? 'none' : 'inline-flex';
+
+  if (isLast) {
+    hide('nextBtn');
+    show('pdfBtn');
+  } else {
+    show('nextBtn');
+    hide('pdfBtn');
+  }
+
+  document.getElementById('regenBtn').disabled = false;
+  renderDots();
+}
+
+/* ════ Générer l'épisode courant ════ */
+async function generateCurrentEpisode() {
+  const ep = episodes[currentEp];
+  hide('epError');
+  hide('generateEpBtn');
+  hide('episodeTextarea');
+  show('epLoader');
+  document.getElementById('regenBtn').disabled = true;
+
+  const prevContents = episodes
+    .slice(0, currentEp)
+    .filter(e => e.generated)
+    .map(e => e.content);
+
+  try {
+    const res = await fetch('/api/generate-story-episode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: config.title,
+        synopsis: config.synopsis,
+        episodeNumber: currentEp + 1,
+        totalEpisodes: config.totalEpisodes,
+        paragraphCount: config.paragraphCount,
+        charsPerParagraph: config.charsPerParagraph,
+        characters: config.characters,
+        city: config.city,
+        previousEpisodes: prevContents,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      showEpError(data.error || 'Erreur lors de la génération.');
+      return;
+    }
+
+    episodes[currentEp].content = data.content;
+    episodes[currentEp].generated = true;
+
+    hide('epLoader');
+    show('episodeTextarea');
+    document.getElementById('episodeTextarea').value = data.content;
+    document.getElementById('regenBtn').disabled = false;
+
+    const isLast = currentEp === config.totalEpisodes - 1;
+    if (isLast) show('finalBanner');
+
+    renderDots();
+  } catch (err) {
+    showEpError('Erreur réseau : ' + err.message);
+  }
+}
+
+/* ════ Régénérer ════ */
+async function regenerateEpisode() {
+  episodes[currentEp].generated = false;
+  episodes[currentEp].content = '';
+  hide('finalBanner');
+  await generateCurrentEpisode();
+}
+
+/* ════ Navigation ════ */
+function goToNextEpisode() {
+  saveCurrentEpisodeText();
+  if (currentEp >= config.totalEpisodes - 1) return;
+  currentEp++;
+  renderEpisode(currentEp);
+  if (!episodes[currentEp].generated) {
+    generateCurrentEpisode();
+  }
+}
+
+function goToPrevEpisode() {
+  saveCurrentEpisodeText();
+  if (currentEp <= 0) return;
+  currentEp--;
+  renderEpisode(currentEp);
+}
+
+function jumpToEpisode(idx) {
+  if (!episodes[idx].generated && idx !== currentEp) return;
+  saveCurrentEpisodeText();
+  currentEp = idx;
+  renderEpisode(currentEp);
+}
+
+function saveCurrentEpisodeText() {
+  const ta = document.getElementById('episodeTextarea');
+  if (episodes[currentEp] && ta.value) {
+    episodes[currentEp].content = ta.value;
+  }
+}
+
+/* ════ Télécharger en PDF ════ */
+async function downloadPDF() {
+  saveCurrentEpisodeText();
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  const pageW = 210;
+  const pageH = 297;
+  const marginL = 20;
+  const marginR = 20;
+  const marginT = 24;
+  const marginB = 24;
+  const usableW = pageW - marginL - marginR;
+  const lineH = 7;
+
+  function addPage() {
+    doc.addPage();
+    return marginT;
+  }
+
+  function wrapText(text, maxW, fontSize) {
+    doc.setFontSize(fontSize);
+    return doc.splitTextToSize(text, maxW);
+  }
+
+  /* Couverture */
+  doc.setFillColor(11, 77, 46);
+  doc.rect(0, 0, pageW, pageH, 'F');
+  doc.setTextColor(240, 192, 64);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(28);
+  doc.text(config.title.toUpperCase(), pageW / 2, 80, { align: 'center' });
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(14);
+  doc.text(`${config.totalEpisodes} épisode${config.totalEpisodes > 1 ? 's' : ''}`, pageW / 2, 100, { align: 'center' });
+  doc.text(config.city, pageW / 2, 112, { align: 'center' });
+  if (config.characters.length > 0) {
+    doc.setFontSize(11);
+    doc.text('Personnages : ' + config.characters.join(', '), pageW / 2, 130, { align: 'center', maxWidth: usableW });
+  }
+  doc.setFontSize(10);
+  doc.setTextColor(200, 230, 210);
+  doc.text('Généré par Dahomey Chat', pageW / 2, pageH - 20, { align: 'center' });
+
+  /* Épisodes */
+  for (let i = 0; i < episodes.length; i++) {
+    const ep = episodes[i];
+    if (!ep.content) continue;
+
+    doc.addPage();
+    let y = marginT;
+
+    doc.setFillColor(11, 77, 46);
+    doc.rect(0, 0, pageW, 18, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text(`ÉPISODE ${i + 1} / ${config.totalEpisodes} — ${config.title.toUpperCase()}`, marginL, 12);
+
+    y = 30;
+    doc.setTextColor(30, 30, 30);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(15);
+    doc.text(`Épisode ${i + 1}`, marginL, y);
+    y += 10;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(50, 50, 50);
+
+    const paras = ep.content.split(/\n{1,}/g).filter(p => p.trim());
+    for (const para of paras) {
+      const lines = wrapText(para.trim(), usableW, 11);
+      for (const line of lines) {
+        if (y + lineH > pageH - marginB) { y = addPage(); }
+        doc.text(line, marginL, y);
+        y += lineH;
+      }
+      y += 4;
+    }
+
+    doc.setDrawColor(200, 220, 210);
+    doc.setLineWidth(0.3);
+    doc.line(marginL, pageH - 14, pageW - marginR, pageH - 14);
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text(`${config.title} • Épisode ${i + 1}`, marginL, pageH - 8);
+    doc.text(config.city, pageW - marginR, pageH - 8, { align: 'right' });
+  }
+
+  doc.save(`${config.title.replace(/\s+/g, '-')}.pdf`);
+}
+
+/* ════ Réinitialiser ════ */
+function restartStory() {
+  episodes = [];
+  characters = [];
+  config = {};
+  currentEp = 0;
+  document.getElementById('charsTags').innerHTML = '';
+  document.getElementById('episodePhase').classList.add('hidden');
+  document.getElementById('configPhase').classList.remove('hidden');
+  document.getElementById('headerSub').textContent = 'Configurez votre série par épisodes';
+}
+
+function goBack() {
+  if (document.getElementById('episodePhase').classList.contains('hidden')) {
+    history.length > 1 ? history.back() : location.href = '/';
+  } else {
+    if (confirm('Abandonner et revenir à la configuration ?')) {
+      restartStory();
+    }
+  }
+}
+
+/* ════ Helpers ════ */
+function showEpError(msg) {
+  hide('epLoader');
+  show('episodeTextarea');
+  show('generateEpBtn');
+  const box = document.getElementById('epError');
+  box.classList.remove('hidden');
+  document.getElementById('epErrorMsg').textContent = msg;
+  document.getElementById('regenBtn').disabled = false;
+}
+function show(id) { document.getElementById(id)?.classList.remove('hidden'); }
+function hide(id) { document.getElementById(id)?.classList.add('hidden'); }
+</script>
+</body>
+</html>

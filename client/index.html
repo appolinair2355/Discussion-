@@ -72,41 +72,48 @@
 
       var BTN_ID = 'vg-inject-btn';
 
-      function makeBtn() {
+      function makeBtn(id, title, icon, href, badge) {
         var b = document.createElement('button');
-        b.id  = BTN_ID;
+        b.id  = id;
         b.className = 'vg-inject-btn';
-        b.setAttribute('title', 'Générer une vidéo réaliste avec l\'IA');
-        b.innerHTML =
-          '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" ' +
-          'stroke="currentColor" stroke-width="2.5" stroke-linecap="round" ' +
-          'stroke-linejoin="round" style="flex-shrink:0">' +
-          '<polygon points="23 7 16 12 23 17 23 7"/>' +
-          '<rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>' +
-          '</svg>' +
-          '<span>G\u00e9n\u00e9rer une vid\u00e9o r\u00e9aliste</span>' +
-          '<span class="vg-badge">IA</span>';
-        b.addEventListener('click', function () {
-          window.location.href = '/video';
-        });
+        b.setAttribute('title', title);
+        b.innerHTML = icon +
+          '<span>' + title + '</span>' +
+          '<span class="vg-badge">' + badge + '</span>';
+        b.addEventListener('click', function () { window.location.href = href; });
         return b;
       }
 
-      function tryInject() {
-        // Si le bouton est déjà dans le DOM, on ne fait rien
-        if (document.getElementById(BTN_ID)) return;
+      var ICON_VIDEO =
+        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>';
+      var ICON_IMAGE =
+        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
+      var ICON_STORY =
+        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>';
 
+      function tryInject() {
         // .settings-enter existe SEULEMENT après validation du mot de passe admin
         var panel = document.querySelector('.settings-enter');
         if (!panel) return;
 
-        // On place le bouton en tête du panel (juste sous le header photo)
-        // Le premier enfant est la bannière photo — on insère après
         var firstChild = panel.firstElementChild;
-        if (firstChild) {
-          panel.insertBefore(makeBtn(), firstChild.nextSibling);
-        } else {
-          panel.appendChild(makeBtn());
+
+        if (!document.getElementById(BTN_ID)) {
+          var videoBtn = makeBtn(BTN_ID, 'G\u00e9n\u00e9rer une vid\u00e9o r\u00e9aliste', ICON_VIDEO, '/video', 'IA');
+          if (firstChild) panel.insertBefore(videoBtn, firstChild.nextSibling);
+          else panel.appendChild(videoBtn);
+        }
+        if (!document.getElementById('img-inject-btn')) {
+          var imgBtn = makeBtn('img-inject-btn', 'G\u00e9n\u00e9rer une image BD', ICON_IMAGE, '/image', 'IA');
+          var after = document.getElementById(BTN_ID);
+          if (after && after.nextSibling) panel.insertBefore(imgBtn, after.nextSibling);
+          else panel.appendChild(imgBtn);
+        }
+        if (!document.getElementById('story-inject-btn')) {
+          var storyBtn = makeBtn('story-inject-btn', 'G\u00e9n\u00e9rer une histoire', ICON_STORY, '/story', 'IA');
+          var after2 = document.getElementById('img-inject-btn');
+          if (after2 && after2.nextSibling) panel.insertBefore(storyBtn, after2.nextSibling);
+          else panel.appendChild(storyBtn);
         }
       }
 

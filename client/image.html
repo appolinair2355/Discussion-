@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+  <title>Générateur d'Images IA — Dahomey Chat</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Bangers&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --green-dark: #0B4D2E;
+      --green-main: #128C7E;
+      --green-light: #25D366;
+      --gold: #D4A017;
+      --gold-light: #F0C040;
+      --bg: #ECE5DD;
+      --surface: #FFFFFF;
+      --text: #111B21;
+      --text-muted: #667781;
+      --error: #E53935;
+      --radius: 16px;
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; }
+
+    header {
+      background: var(--green-dark); color: #fff;
+      display: flex; align-items: center; gap: 12px;
+      padding: 0 20px; height: 60px;
+      position: sticky; top: 0; z-index: 10;
+      box-shadow: 0 2px 8px rgba(0,0,0,.3);
+    }
+    header button.back { background: none; border: none; color: #fff; cursor: pointer; padding: 8px; border-radius: 50%; display: flex; align-items: center; transition: background .15s; }
+    header button.back:hover { background: rgba(255,255,255,.15); }
+    header .title-block { flex: 1; }
+    header h1 { font-size: 1.05rem; font-weight: 600; }
+    header p  { font-size: .75rem; color: rgba(255,255,255,.65); margin-top: 1px; }
+    header .badge { background: var(--gold); color: #fff; font-size: .7rem; font-weight: 700; padding: 3px 8px; border-radius: 20px; text-transform: uppercase; }
+
+    main { flex: 1; max-width: 760px; width: 100%; margin: 0 auto; padding: 24px 16px 48px; display: flex; flex-direction: column; gap: 20px; }
+
+    .card { background: var(--surface); border-radius: var(--radius); padding: 22px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    .card h2 { font-size: .85rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 16px; }
+
+    label { display: block; font-size: .85rem; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    input[type="text"], textarea, select {
+      width: 100%; border: 2px solid #E2E8EA; border-radius: 10px;
+      padding: 10px 13px; font-family: 'Inter', sans-serif; font-size: .9rem;
+      color: var(--text); outline: none; transition: border-color .2s;
+    }
+    input[type="text"]:focus, textarea:focus, select:focus { border-color: var(--green-main); }
+    input[type="text"]::placeholder, textarea::placeholder { color: #aab; }
+    textarea { min-height: 80px; resize: vertical; line-height: 1.5; }
+
+    .field { margin-bottom: 14px; }
+
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 500px) { .row2 { grid-template-columns: 1fr; } }
+
+    .dialogue-entry {
+      background: #F7FBF9; border: 1.5px solid #D6EFE8; border-radius: 12px;
+      padding: 14px; margin-bottom: 12px; position: relative;
+    }
+    .dialogue-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .dialogue-header span { font-size: .8rem; font-weight: 700; color: var(--green-dark); }
+    .btn-remove { background: none; border: none; cursor: pointer; color: var(--error); font-size: 1.1rem; padding: 2px 6px; border-radius: 6px; }
+    .btn-remove:hover { background: #ffeeee; }
+
+    .position-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+    .pos-btn {
+      border: 2px solid #D6EFE8; border-radius: 8px;
+      background: #fff; cursor: pointer; padding: 6px 4px;
+      font-size: .72rem; font-weight: 600; color: var(--text-muted);
+      transition: all .15s; text-align: center; line-height: 1.3;
+    }
+    .pos-btn:hover { border-color: var(--green-main); color: var(--green-dark); }
+    .pos-btn.active { border-color: var(--green-main); background: #e8f8f2; color: var(--green-dark); }
+
+    .btn-add { display: flex; align-items: center; gap: 6px; background: none; border: 2px dashed var(--green-main); color: var(--green-main); border-radius: 10px; padding: 10px 16px; font-size: .85rem; font-weight: 600; cursor: pointer; transition: background .15s; width: 100%; justify-content: center; }
+    .btn-add:hover { background: #e8f8f2; }
+
+    .btn { display: inline-flex; align-items: center; gap: 8px; border: none; border-radius: 24px; padding: 12px 24px; font-family: 'Inter', sans-serif; font-size: .9rem; font-weight: 600; cursor: pointer; transition: transform .1s, opacity .2s; }
+    .btn:active { transform: scale(.97); }
+    .btn-primary { background: var(--green-dark); color: #fff; box-shadow: 0 2px 8px rgba(11,77,46,.3); }
+    .btn-primary:hover:not(:disabled) { background: #0d5c37; }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-gold { background: var(--gold); color: #fff; box-shadow: 0 2px 8px rgba(212,160,23,.35); }
+    .btn-gold:hover { background: #c4930e; }
+    .btn-outline { background: transparent; color: var(--green-dark); border: 2px solid var(--green-dark); }
+    .btn-outline:hover { background: #f0faf5; }
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+
+    .spinner-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 24px 0; }
+    .spinner { width: 52px; height: 52px; border: 5px solid #E2E8EA; border-top-color: var(--green-main); border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .status-text { font-size: .95rem; color: var(--text-muted); font-weight: 500; text-align: center; }
+
+    .error-box { background: #FFF3F3; border: 1px solid #FECACA; border-radius: 10px; padding: 12px 16px; display: flex; align-items: flex-start; gap: 8px; font-size: .87rem; color: #991B1B; margin-top: 12px; }
+
+    .hidden { display: none !important; }
+
+    /* Canvas container */
+    #canvasContainer {
+      display: flex; flex-direction: column; align-items: center; gap: 16px;
+    }
+    #imageCanvas {
+      max-width: 100%; border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.15);
+      cursor: pointer;
+    }
+
+    .info-tip { background: #F0FBF7; border-left: 3px solid var(--green-main); border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: .8rem; color: var(--green-dark); line-height: 1.6; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <button class="back" onclick="history.length > 1 ? history.back() : location.href='/'" aria-label="Retour">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <div class="title-block">
+    <h1>Générateur d'Images IA</h1>
+    <p>Créez des illustrations avec dialogues</p>
+  </div>
+  <span class="badge">IA</span>
+</header>
+
+<main>
+
+  <!-- FORMULAIRE -->
+  <div class="card" id="formCard">
+    <div class="info-tip">
+      💡 Décrivez une scène, ajoutez vos dialogues et positions, puis générez une image BD avec bulles de dialogue.
+    </div>
+
+    <h2>🖼️ Scène & Titre</h2>
+
+    <div class="row2">
+      <div class="field">
+        <label for="imgTitle">Titre (en haut)</label>
+        <input type="text" id="imgTitle" placeholder="ex: Kagé Aventure" maxlength="30" />
+      </div>
+      <div class="field">
+        <label for="imgSubtitle">Sous-titre (bannière basse)</label>
+        <input type="text" id="imgSubtitle" placeholder="ex: PROJET MODERNE BENIN" maxlength="40" />
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label for="imgNumber">Numéro / Épisode</label>
+        <input type="text" id="imgNumber" placeholder="ex: 01" maxlength="5" />
+      </div>
+      <div class="field">
+        <label for="imgMainTitle">Titre principal (bannière)</label>
+        <input type="text" id="imgMainTitle" placeholder="ex: VILLA BELLE VIE" maxlength="30" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="scenePrompt">Description de la scène (prompt IA)</label>
+      <textarea id="scenePrompt" placeholder="Ex : Une jeune femme en tenue traditionnelle béninoise et une femme âgée en boubou bleu assises à une table de repas dans un appartement moderne, scène chaleureuse, dessin animé coloré…" maxlength="500"></textarea>
+      <div style="font-size:.75rem;color:var(--text-muted);text-align:right;margin-top:4px"><span id="sceneCharCount">0</span>/500</div>
+    </div>
+
+    <h2 style="margin-top:8px">💬 Bulles de Dialogue</h2>
+
+    <div id="dialoguesContainer"></div>
+
+    <button class="btn-add" onclick="addDialogue()" id="addBtn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Ajouter une bulle de dialogue
+    </button>
+
+    <div class="btn-row">
+      <button id="generateBtn" class="btn btn-primary" onclick="startGeneration()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Générer l'image
+      </button>
+    </div>
+  </div>
+
+  <!-- LOADER -->
+  <div class="card hidden" id="loadingCard">
+    <div class="spinner-wrap">
+      <div class="spinner"></div>
+      <p class="status-text" id="loadingText">Génération de l'image en cours…</p>
+      <p style="font-size:.8rem;color:#aab">Cela peut prendre 20 à 60 secondes</p>
+    </div>
+    <div class="error-box hidden" id="errorBox">
+      <span>⚠️</span><span id="errorMsg"></span>
+    </div>
+  </div>
+
+  <!-- RÉSULTAT -->
+  <div class="card hidden" id="resultCard">
+    <h2>🎨 Image Générée</h2>
+    <div id="canvasContainer">
+      <canvas id="imageCanvas"></canvas>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="downloadImage()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Télécharger l'image
+      </button>
+      <button class="btn btn-outline" onclick="resetForm()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+        Nouvelle image
+      </button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+/* ════ État ════ */
+let dialogueCount = 0;
+const MAX_DIALOGUES = 4;
+let currentImageUrl = null;
+let pollTimer = null;
+
+const POSITIONS = [
+  { id: 'top-left',     label: '↖ Haut G.' },
+  { id: 'top-right',    label: '↗ Haut D.' },
+  { id: 'mid-left',     label: '← Milieu G.' },
+  { id: 'mid-right',    label: '→ Milieu D.' },
+  { id: 'bot-left',     label: '↙ Bas G.' },
+  { id: 'bot-right',    label: '↘ Bas D.' },
+];
+
+/* ════ Compteur de caractères ════ */
+document.getElementById('scenePrompt').addEventListener('input', function () {
+  document.getElementById('sceneCharCount').textContent = this.value.length;
+});
+
+/* ════ Ajouter une bulle ════ */
+function addDialogue() {
+  if (dialogueCount >= MAX_DIALOGUES) return;
+  dialogueCount++;
+  const idx = dialogueCount;
+  const defaultPos = idx % 2 === 1 ? 'top-left' : 'top-right';
+
+  const div = document.createElement('div');
+  div.className = 'dialogue-entry';
+  div.id = `dlg-${idx}`;
+  div.innerHTML = `
+    <div class="dialogue-header">
+      <span>Bulle ${idx}</span>
+      <button class="btn-remove" onclick="removeDialogue(${idx})" title="Supprimer">✕</button>
+    </div>
+    <textarea id="dlg-text-${idx}" placeholder="Texte du dialogue…" maxlength="120" rows="2" style="margin-bottom:10px"></textarea>
+    <label style="font-size:.78rem;margin-bottom:6px;display:block">Position de la bulle :</label>
+    <div class="position-grid">
+      ${POSITIONS.map(p => `
+        <button class="pos-btn${p.id === defaultPos ? ' active' : ''}"
+          data-dlg="${idx}" data-pos="${p.id}"
+          onclick="selectPos(this)">${p.label}</button>
+      `).join('')}
+    </div>
+  `;
+  document.getElementById('dialoguesContainer').appendChild(div);
+  if (dialogueCount >= MAX_DIALOGUES) {
+    document.getElementById('addBtn').style.display = 'none';
+  }
+}
+
+function removeDialogue(idx) {
+  const el = document.getElementById(`dlg-${idx}`);
+  if (el) el.remove();
+  if (dialogueCount >= MAX_DIALOGUES) {
+    document.getElementById('addBtn').style.display = 'flex';
+  }
+  dialogueCount = Math.max(0, dialogueCount - 1);
+}
+
+function selectPos(btn) {
+  const dlg = btn.dataset.dlg;
+  document.querySelectorAll(`.pos-btn[data-dlg="${dlg}"]`).forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+/* ════ Récupérer les dialogues ════ */
+function getDialogues() {
+  const entries = document.querySelectorAll('.dialogue-entry');
+  return Array.from(entries).map(entry => {
+    const id = entry.id.replace('dlg-', '');
+    const text = document.getElementById(`dlg-text-${id}`)?.value.trim() || '';
+    const activePos = entry.querySelector('.pos-btn.active');
+    return { text, position: activePos?.dataset.pos || 'top-left' };
+  }).filter(d => d.text);
+}
+
+/* ════ Lancer la génération ════ */
+async function startGeneration() {
+  const prompt = document.getElementById('scenePrompt').value.trim();
+  if (!prompt) { alert('Veuillez décrire la scène.'); return; }
+
+  document.getElementById('generateBtn').disabled = true;
+  show('loadingCard');
+  hide('resultCard');
+  hide('errorBox');
+  hide('formCard');
+
+  document.getElementById('loadingText').textContent = 'Envoi du prompt à l\'IA…';
+
+  try {
+    const res = await fetch('/api/generate-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) { showError(data.error || 'Erreur lors de la génération.'); return; }
+
+    if (data.status === 'succeeded' && data.imageUrl) {
+      await renderComicImage(data.imageUrl);
+      return;
+    }
+    if (data.id) {
+      pollImageStatus(data.id);
+    } else {
+      showError('Réponse inattendue du serveur.');
+    }
+  } catch (err) {
+    showError('Erreur réseau : ' + err.message);
+  }
+}
+
+/* ════ Polling ════ */
+function pollImageStatus(id) {
+  let elapsed = 0;
+  const tick = async () => {
+    elapsed += 5;
+    document.getElementById('loadingText').textContent = `Génération en cours… ${elapsed}s`;
+    try {
+      const res = await fetch(`/api/image-status/${id}`);
+      const data = await res.json();
+      if (data.status === 'succeeded' && data.imageUrl) {
+        await renderComicImage(data.imageUrl);
+      } else if (data.status === 'failed' || data.error) {
+        showError(data.error || 'La génération a échoué.');
+      } else {
+        pollTimer = setTimeout(tick, 5000);
+      }
+    } catch (err) {
+      showError('Erreur réseau : ' + err.message);
+    }
+  };
+  pollTimer = setTimeout(tick, 5000);
+}
+
+/* ════ Rendu Canvas ════ */
+async function renderComicImage(imageUrl) {
+  currentImageUrl = imageUrl;
+  const canvas = document.getElementById('imageCanvas');
+  const ctx = canvas.getContext('2d');
+
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+
+  await new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = reject;
+    img.src = imageUrl;
+  });
+
+  const SIZE = 680;
+  canvas.width  = SIZE;
+  canvas.height = SIZE;
+
+  ctx.drawImage(img, 0, 0, SIZE, SIZE);
+
+  const dialogues = getDialogues();
+  for (const dlg of dialogues) {
+    if (dlg.text) drawBubble(ctx, dlg.text, dlg.position, SIZE);
+  }
+
+  const title    = document.getElementById('imgTitle').value.trim();
+  const subtitle = document.getElementById('imgSubtitle').value.trim();
+  const mainTitle= document.getElementById('imgMainTitle').value.trim();
+  const number   = document.getElementById('imgNumber').value.trim();
+
+  if (title || number) drawTopBanner(ctx, title, number, SIZE);
+  if (mainTitle || subtitle) drawBottomBanner(ctx, mainTitle, subtitle, SIZE);
+
+  hide('loadingCard');
+  show('resultCard');
+  show('formCard');
+  document.getElementById('generateBtn').disabled = false;
+}
+
+/* ════ Dessin bulle ════ */
+function drawBubble(ctx, text, position, SIZE) {
+  const PAD = 16;
+  const MAXW = Math.floor(SIZE * 0.38);
+
+  ctx.font = 'bold 15px Inter, sans-serif';
+  const words = text.split(' ');
+  let lines = [], line = '';
+  for (const w of words) {
+    const test = line ? line + ' ' + w : w;
+    if (ctx.measureText(test).width > MAXW - PAD * 2) {
+      if (line) lines.push(line);
+      line = w;
+    } else {
+      line = test;
+    }
+  }
+  if (line) lines.push(line);
+
+  const LH = 20;
+  const bw = Math.min(MAXW, Math.max(...lines.map(l => ctx.measureText(l).width)) + PAD * 2);
+  const bh = lines.length * LH + PAD * 2;
+
+  let bx, by;
+  const MARGIN = 10;
+  switch (position) {
+    case 'top-left':    bx = MARGIN; by = MARGIN; break;
+    case 'top-right':   bx = SIZE - bw - MARGIN; by = MARGIN; break;
+    case 'mid-left':    bx = MARGIN; by = (SIZE - bh) / 2; break;
+    case 'mid-right':   bx = SIZE - bw - MARGIN; by = (SIZE - bh) / 2; break;
+    case 'bot-left':    bx = MARGIN; by = SIZE - bh - MARGIN - 80; break;
+    case 'bot-right':   bx = SIZE - bw - MARGIN; by = SIZE - bh - MARGIN - 80; break;
+    default:            bx = MARGIN; by = MARGIN;
+  }
+
+  const R = 14;
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.25)';
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetX = 2;
+  ctx.shadowOffsetY = 2;
+
+  ctx.beginPath();
+  ctx.moveTo(bx + R, by);
+  ctx.lineTo(bx + bw - R, by);
+  ctx.quadraticCurveTo(bx + bw, by, bx + bw, by + R);
+  ctx.lineTo(bx + bw, by + bh - R);
+  ctx.quadraticCurveTo(bx + bw, by + bh, bx + bw - R, by + bh);
+
+  const tailX = position.includes('right') ? bx + bw * 0.25 : bx + bw * 0.75;
+  ctx.lineTo(tailX + 12, by + bh);
+  ctx.lineTo(tailX + 6, by + bh + 16);
+  ctx.lineTo(tailX, by + bh);
+  ctx.lineTo(bx + R, by + bh);
+  ctx.quadraticCurveTo(bx, by + bh, bx, by + bh - R);
+  ctx.lineTo(bx, by + R);
+  ctx.quadraticCurveTo(bx, by, bx + R, by);
+  ctx.closePath();
+
+  ctx.fillStyle = 'rgba(255,255,255,0.94)';
+  ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.fillStyle = '#111';
+  ctx.font = 'bold 15px Inter, sans-serif';
+  ctx.textAlign = 'left';
+  lines.forEach((l, i) => {
+    ctx.fillText(l, bx + PAD, by + PAD + LH * i + 12);
+  });
+  ctx.restore();
+}
+
+/* ════ Bannière haute ════ */
+function drawTopBanner(ctx, title, number, SIZE) {
+  const H = 46;
+  ctx.save();
+  ctx.fillStyle = 'rgba(11,77,46,0.88)';
+  ctx.fillRect(0, 0, SIZE, H);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 20px Bangers, Inter, sans-serif';
+  ctx.textAlign = 'center';
+  if (title) ctx.fillText(title.toUpperCase(), SIZE / 2, 30);
+  if (number) {
+    ctx.fillStyle = '#F0C040';
+    ctx.font = 'bold 18px Inter, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText('#' + number, SIZE - 12, 30);
+  }
+  ctx.restore();
+}
+
+/* ════ Bannière basse ════ */
+function drawBottomBanner(ctx, mainTitle, subtitle, SIZE) {
+  const BH = 64;
+  const y = SIZE - BH;
+  ctx.save();
+  const grad = ctx.createLinearGradient(0, y, 0, SIZE);
+  grad.addColorStop(0, 'rgba(160,100,20,0.92)');
+  grad.addColorStop(1, 'rgba(100,60,10,0.97)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, y, SIZE, BH);
+
+  ctx.strokeStyle = '#F0C040';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(8, y + 6, SIZE - 16, BH - 12);
+
+  if (mainTitle) {
+    ctx.fillStyle = '#F0C040';
+    ctx.font = 'bold 22px Bangers, Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.letterSpacing = '2px';
+    ctx.fillText('< ' + mainTitle.toUpperCase() + ' >', SIZE / 2, y + 28);
+  }
+  if (subtitle) {
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 13px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('< ' + subtitle.toUpperCase() + ' >', SIZE / 2, y + 50);
+  }
+  ctx.restore();
+}
+
+/* ════ Télécharger ════ */
+function downloadImage() {
+  const canvas = document.getElementById('imageCanvas');
+  const link = document.createElement('a');
+  link.download = 'dahomey-image.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+/* ════ Reset ════ */
+function resetForm() {
+  clearTimeout(pollTimer);
+  currentImageUrl = null;
+  hide('resultCard');
+  hide('loadingCard');
+  show('formCard');
+  document.getElementById('generateBtn').disabled = false;
+}
+
+/* ════ Erreur ════ */
+function showError(msg) {
+  clearTimeout(pollTimer);
+  document.getElementById('generateBtn').disabled = false;
+  show('loadingCard');
+  show('formCard');
+  const box = document.getElementById('errorBox');
+  box.classList.remove('hidden');
+  document.getElementById('errorMsg').textContent = msg;
+}
+
+/* ════ Helpers ════ */
+function show(id) { document.getElementById(id)?.classList.remove('hidden'); }
+function hide(id) { document.getElementById(id)?.classList.add('hidden'); }
+
+/* Init: ajouter 2 bulles par défaut */
+addDialogue();
+addDialogue();
+</script>
+</body>
+</html>
