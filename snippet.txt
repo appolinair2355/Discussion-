@@ -1,0 +1,562 @@
+    mediaUrl: m.mediaUrl ?? null,
+    isAdmin: m.isAdmin,
+    createdAt: m.createdAt.toISOString()
+  };
+}
+router6.get("/api/messages", async (_req, res) => {
+  const rows = await db.select({
+    id: messagesTable.id,
+    memberId: messagesTable.memberId,
+    content: messagesTable.content,
+    type: messagesTable.type,
+    mediaUrl: messagesTable.mediaUrl,
+    isAdmin: messagesTable.isAdmin,
+    createdAt: messagesTable.createdAt,
+    firstName: membersTable.firstName,
+    lastName: membersTable.lastName,
+    avatarColor: membersTable.avatarColor
+  }).from(messagesTable).leftJoin(membersTable, eq(messagesTable.memberId, membersTable.id)).orderBy(asc(messagesTable.createdAt));
+  res.json(rows.map((r) => fmt({
+    ...r,
+    firstName: r.firstName ?? null,
+    lastName: r.lastName ?? null,
+    avatarColor: r.avatarColor ?? null
+  })));
+});
+router6.get("/api/messages/stream", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  const socket = req.socket;
+  if (socket) {
+    socket.setNoDelay(true);
+    socket.setTimeout(0);
+  }
+  res.flushHeaders();
+  addSseClient(res);
+  try {
+    res.write(": connected\n\n");
+  } catch {
+  }
+  const heartbeat = setInterval(() => {
+    try {
+      res.write(": heartbeat\n\n");
+    } catch {
+      clearInterval(heartbeat);
+    }
+  }, 1e4);
+  req.on("close", () => {
+    clearInterval(heartbeat);
+    removeSseClient(res);
+  });
+});
+router6.post("/api/messages", async (req, res) => {
+  const parsed = CreateMessageBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const [msg] = await db.insert(messagesTable).values({
+    content: parsed.data.content,
+    type: parsed.data.type ?? "text",
+    mediaUrl: parsed.data.mediaUrl ?? null,
+    isAdmin: true,
+    memberId: null
+  }).returning();
+  const formatted = fmt({ ...msg, firstName: null, lastName: null, avatarColor: null });
+  broadcastMessage(formatted);
+  res.status(201).json(formatted);
+});
+router6.post("/api/upload", upload.single("file"), async (req, res) => {
+  if (!req.file) {
+    res.status(400).json({ error: "Aucun fichier re\xE7u" });
+    return;
+  }
+  res.json({ url: `/api/uploads/${req.file.filename}`, filename: req.file.originalname });
+});
+var messages_default = router6;
+
+// src/lib/logger.ts
+var import_pino = __toESM(require_pino(), 1);
+var isProduction = process.env.NODE_ENV === "production";
+var logger = (0, import_pino.default)({
+  level: process.env.LOG_LEVEL ?? "info",
+  redact: [
+    "req.headers.authorization",
+    "req.headers.cookie",
+    "res.headers['set-cookie']"
+  ],
+  ...isProduction ? {} : {
+    transport: {
+      target: "pino-pretty",
+      options: { colorize: true }
+    }
+  }
+});
+
+// src/app.ts
+var __dirname3 = path2.dirname(fileURLToPath2(import.meta.url));
+var app = (0, import_express7.default)();
+app.use(
+  (0, import_pino_http.default)({
+    logger,
+    serializers: {
+      req(req) {
+        return {
+          id: req.id,
+          method: req.method,
+          url: req.url?.split("?")[0]
+        };
+      },
+      res(res) {
+        return {
+          statusCode: res.statusCode
+        };
+      }
+    }
+  })
+);
+app.use((0, import_cors.default)());
+app.use(import_express7.default.json({ limit: "50mb" }));
+app.use(import_express7.default.urlencoded({ extended: true, limit: "50mb" }));
+var uploadsDir2 = path2.join(__dirname3, "..", "uploads");
+app.use("/api/uploads", import_express7.default.static(uploadsDir2));
+app.use(routes_default);
+app.use(members_default);
+app.use(messages_default);
+var clientDir = path2.join(__dirname3, "..", "client");
+app.use(import_express7.default.static(clientDir));
+app.get("/{*path}", (_req, res) => {
+  res.sendFile(path2.join(clientDir, "index.html"));
+});
+var app_default = app;
+
+// src/index.ts
+var rawPort = process.env["PORT"];
+if (!rawPort) {
+  throw new Error("PORT environment variable is required but was not provided.");
+}
+var port = Number(rawPort);
+if (Number.isNaN(port) || port <= 0) {
+  throw new Error(`Invalid PORT value: "${rawPort}"`);
+}
+var DEFAULT_MEMBERS = [
+  { firstName: "Kofi", lastName: "Mensah", gender: "homme" },
+  { firstName: "Fatou", lastName: "Diallo", gender: "femme" },
+  { firstName: "Segun", lastName: "Adesanya", gender: "homme" },
+  { firstName: "Adjoa", lastName: "Koudou", gender: "femme" },
+  { firstName: "Mawuli", lastName: "Agbodjan", gender: "homme" },
+  { firstName: "Rosine", lastName: "Hounkpatin", gender: "femme" },
+  { firstName: "Kodjo", lastName: "Attiogbe", gender: "homme" },
+  { firstName: "Blandine", lastName: "Dossou", gender: "femme" },
+  { firstName: "Ayodele", lastName: "Falade", gender: "homme" },
+  { firstName: "Grace", lastName: "Amoussou", gender: "femme" }
+];
+var AVATAR_COLORS2 = [
+  "#FF6B6B",
+  "#4ECDC4",
+  "#45B7D1",
+  "#96CEB4",
+  "#FFEAA7",
+  "#DDA0DD",
+  "#98D8C8",
+  "#F7DC6F",
+  "#BB8FCE",
+  "#85C1E9"
+];
+async function seed() {
+  const existing = await db.select().from(membersTable);
+  if (existing.length === 0) {
+    logger.info("Seeding 10 default members\u2026");
+    await db.insert(membersTable).values(
+      DEFAULT_MEMBERS.map((m, i) => ({
+        firstName: m.firstName,
+        lastName: m.lastName,
+        avatarColor: AVATAR_COLORS2[i % AVATAR_COLORS2.length],
+        gender: m.gender
+      }))
+    );
+    logger.info("Members seeded.");
+    await db.update(groupSettingsTable).set({ isActive: true, topic: "La vie au quotidien au B\xE9nin", turnIndex: 0 }).where(eq(groupSettingsTable.id, 1));
+    logger.info("Discussion auto-started.");
+  } else {
+    const femaleFirstNames = /* @__PURE__ */ new Set([
+      "fatou",
+      "adjoa",
+      "rosine",
+      "blandine",
+      "grace",
+      "aissatou",
+      "awa",
+      "mariama",
+      "aminata",
+      "bintou",
+      "kadija",
+      "coumba",
+      "astou",
+      "ndeye",
+      "penda",
+      "oumou",
+      "adja",
+      "khady",
+      "yaye",
+      "akosua",
+      "abena",
+      "ama",
+      "afia",
+      "efua",
+      "araba",
+      "adwoa",
+      "adjovi",
+      "c\xE9lestine",
+      "v\xE9ronique",
+      "marie",
+      "sophie",
+      "claire",
+      "nathalie",
+      "alice",
+      "sarah",
+      "laure",
+      "julie",
+      "camille",
+      "lucie",
+      "emma",
+      "l\xE9a",
+      "chlo\xE9",
+      "manon",
+      "grace",
+      "patricia",
+      "christelle",
+      "jo\xEBlle",
+      "emmanuella",
+      "larissa",
+      "sandrine",
+      "nad\xE8ge",
+      "prisca",
+      "josiane",
+      "nadine",
+      "odette",
+      "martine"
+    ]);
+    for (const m of existing) {
+      const expectedGender = femaleFirstNames.has(m.firstName.toLowerCase()) ? "femme" : "homme";
+      if (m.gender !== expectedGender) {
+        await db.update(membersTable).set({ gender: expectedGender }).where(eq(membersTable.id, m.id));
+      }
+    }
+  }
+}
+app_default.listen(port, async (err) => {
+  if (err) {
+    logger.error({ err }, "Error listening on port");
+    process.exit(1);
+  }
+  logger.info({ port }, "Server listening");
+  await seed().catch((e) => logger.error({ err: e }, "Seed error"));
+});
+/*! Bundled license information:
+
+depd/index.js:
+  (*!
+   * depd
+   * Copyright(c) 2014-2018 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+statuses/index.js:
+  (*!
+   * statuses
+   * Copyright(c) 2014 Jonathan Ong
+   * Copyright(c) 2016 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+toidentifier/index.js:
+  (*!
+   * toidentifier
+   * Copyright(c) 2016 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+http-errors/index.js:
+  (*!
+   * http-errors
+   * Copyright(c) 2014 Jonathan Ong
+   * Copyright(c) 2016 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+bytes/index.js:
+  (*!
+   * bytes
+   * Copyright(c) 2012-2014 TJ Holowaychuk
+   * Copyright(c) 2015 Jed Watson
+   * MIT Licensed
+   *)
+
+unpipe/index.js:
+  (*!
+   * unpipe
+   * Copyright(c) 2015 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+raw-body/index.js:
+  (*!
+   * raw-body
+   * Copyright(c) 2013-2014 Jonathan Ong
+   * Copyright(c) 2014-2022 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+ee-first/index.js:
+  (*!
+   * ee-first
+   * Copyright(c) 2014 Jonathan Ong
+   * MIT Licensed
+   *)
+
+on-finished/index.js:
+  (*!
+   * on-finished
+   * Copyright(c) 2013 Jonathan Ong
+   * Copyright(c) 2014 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+content-type/dist/index.js:
+content-type/index.js:
+  (*!
+   * content-type
+   * Copyright(c) 2015 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+mime-db/index.js:
+mime-db/index.js:
+  (*!
+   * mime-db
+   * Copyright(c) 2014 Jonathan Ong
+   * Copyright(c) 2015-2022 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+mime-types/index.js:
+mime-types/index.js:
+  (*!
+   * mime-types
+   * Copyright(c) 2014 Jonathan Ong
+   * Copyright(c) 2015 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+media-typer/index.js:
+  (*!
+   * media-typer
+   * Copyright(c) 2014-2017 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+type-is/index.js:
+type-is/index.js:
+  (*!
+   * type-is
+   * Copyright(c) 2014 Jonathan Ong
+   * Copyright(c) 2014-2015 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+body-parser/lib/read.js:
+body-parser/lib/types/raw.js:
+body-parser/lib/types/text.js:
+body-parser/index.js:
+  (*!
+   * body-parser
+   * Copyright(c) 2014-2015 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+body-parser/lib/types/json.js:
+body-parser/lib/types/urlencoded.js:
+  (*!
+   * body-parser
+   * Copyright(c) 2014 Jonathan Ong
+   * Copyright(c) 2014-2015 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+encodeurl/index.js:
+  (*!
+   * encodeurl
+   * Copyright(c) 2016 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+escape-html/index.js:
+  (*!
+   * escape-html
+   * Copyright(c) 2012-2013 TJ Holowaychuk
+   * Copyright(c) 2015 Andreas Lubbe
+   * Copyright(c) 2015 Tiancheng "Timothy" Gu
+   * MIT Licensed
+   *)
+
+parseurl/index.js:
+  (*!
+   * parseurl
+   * Copyright(c) 2014 Jonathan Ong
+   * Copyright(c) 2014-2017 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+finalhandler/index.js:
+  (*!
+   * finalhandler
+   * Copyright(c) 2014-2022 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+express/lib/view.js:
+express/lib/application.js:
+express/lib/request.js:
+express/lib/express.js:
+express/index.js:
+  (*!
+   * express
+   * Copyright(c) 2009-2013 TJ Holowaychuk
+   * Copyright(c) 2013 Roman Shtylman
+   * Copyright(c) 2014-2015 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+etag/index.js:
+  (*!
+   * etag
+   * Copyright(c) 2014-2016 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+forwarded/index.js:
+  (*!
+   * forwarded
+   * Copyright(c) 2014-2017 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+proxy-addr/index.js:
+  (*!
+   * proxy-addr
+   * Copyright(c) 2014-2016 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+express/lib/utils.js:
+express/lib/response.js:
+  (*!
+   * express
+   * Copyright(c) 2009-2013 TJ Holowaychuk
+   * Copyright(c) 2014-2015 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+router/lib/layer.js:
+router/lib/route.js:
+router/index.js:
+  (*!
+   * router
+   * Copyright(c) 2013 Roman Shtylman
+   * Copyright(c) 2014-2022 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+negotiator/index.js:
+  (*!
+   * negotiator
+   * Copyright(c) 2012 Federico Romero
+   * Copyright(c) 2012-2014 Isaac Z. Schlueter
+   * Copyright(c) 2015 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+accepts/index.js:
+  (*!
+   * accepts
+   * Copyright(c) 2014 Jonathan Ong
+   * Copyright(c) 2015 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+fresh/index.js:
+  (*!
+   * fresh
+   * Copyright(c) 2012 TJ Holowaychuk
+   * Copyright(c) 2016-2017 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+range-parser/index.js:
+  (*!
+   * range-parser
+   * Copyright(c) 2012-2014 TJ Holowaychuk
+   * Copyright(c) 2015-2016 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+content-disposition/index.js:
+  (*!
+   * content-disposition
+   * Copyright(c) 2014-2017 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+cookie/index.js:
+  (*!
+   * cookie
+   * Copyright(c) 2012-2014 Roman Shtylman
+   * Copyright(c) 2015 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+send/index.js:
+  (*!
+   * send
+   * Copyright(c) 2012 TJ Holowaychuk
+   * Copyright(c) 2014-2022 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+vary/index.js:
+  (*!
+   * vary
+   * Copyright(c) 2014-2017 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+serve-static/index.js:
+  (*!
+   * serve-static
+   * Copyright(c) 2010 Sencha Inc.
+   * Copyright(c) 2011 TJ Holowaychuk
+   * Copyright(c) 2014-2016 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+object-assign/index.js:
+  (*
+  object-assign
+  (c) Sindre Sorhus
+  @license MIT
+  *)
+
+media-typer/index.js:
+  (*!
+   * media-typer
+   * Copyright(c) 2014 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
+
+safe-buffer/index.js:
+  (*! safe-buffer. MIT License. Feross Aboukhadijeh <https://feross.org/opensource> *)
+*/
+//# sourceMappingURL=index.mjs.map
