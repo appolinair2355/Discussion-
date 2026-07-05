@@ -1,0 +1,1 @@
+{"name":"dahomey-chat","version":"1.0.0","type":"module","scripts":{"start":"node --enable-source-maps dist/index.mjs"},"engines":{"node":">=20.0.0"}}
