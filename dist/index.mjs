@@ -28141,7 +28141,7 @@ var require_pino = __commonJS({
     function pinoBundlerAbsolutePath(p) {
       try {
         const path3 = __require("path");
-        const outputDir = "/home/runner/workspace/artifacts/api-server/dist";
+        const outputDir = (typeof __dirname !== "undefined" ? __dirname : require("path").dirname(require("url").fileURLToPath(import.meta.url)));
         return path3.resolve(outputDir, p.replace(/^\.\//, ""));
       } catch (e) {
         const f = new Function("p", "return new URL(p, import.meta.url).pathname");
@@ -61541,11 +61541,12 @@ function buildSystemPrompt(opts) {
     `R\xC8GLES ABSOLUES \u2014 toute violation = message nul`,
     `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550`,
     ``,
-    `1. R\xC9PONDS OBLIGATOIREMENT \xE0 ${lastSpeakerName ?? "la derni\xE8re personne"} \u2014 adresse-toi \xE0 elle/lui directement.`,
-    `2. MAXIMUM 15 mots. Pas de phrase longue.`,
+    `1. Tu peux r\xE9pondre \xE0 ${lastSpeakerName ?? "quelqu'un"}, mentionner quelqu'un d'autre, ou lancer une id\xE9e nouvelle selon le contexte.`,
+    `2. MAXIMUM 30 mots. Sois vivant, expressif, spontan\xE9 — pas de robot.`,
     `3. UN SEUL message. Pas de guillemets, pas de tiret, pas ton pr\xE9nom devant.`,
     `4. Reste dans le cadre du sujet : "${topic}".`,
     `5. JAMAIS d'ouverture creuse : "Ah oui", "Exactement", "C'est vrai", "Bien s\xFBr", "En effet", "Tout \xE0 fait".`,
+    `6. Varie ton style : parfois une question piq\xFBante, parfois un t\xE9moignage v\xE9cu, parfois une blague b\xE9ninoise, parfois une contradiction franche.`,
     ``
   );
   if (recentAll.length > 0) {
@@ -61586,7 +61587,7 @@ function buildSystemPrompt(opts) {
   } else {
     lines.push(``, `Lance la conversation avec une remarque originale sur : "${topic}".`);
   }
-  lines.push(``, `\xC9cris uniquement ton message (15 mots max, naturel, pr\xE9cis).`);
+  lines.push(``, `\xC9cris uniquement ton message (30 mots max). Sois naturel, vivant, humain \u2014 comme un vrai WhatsApp b\xE9ninois.`);
   return lines.filter((l) => l !== void 0 && l !== "").join("\n") + "\n";
 }
 async function generateMemberMessage(opts) {
