@@ -1,1 +1,16 @@
-{"name":"dahomey-chat","version":"1.0.0","type":"module","scripts":{"start":"node --enable-source-maps dist/index.mjs"},"engines":{"node":">=20.0.0"}}
+{
+  "name": "dahomey-chat",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "start:inner": "node --enable-source-maps dist/index.mjs"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "http-proxy-middleware": "^3.0.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

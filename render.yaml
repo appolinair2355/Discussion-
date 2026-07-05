@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: dahomey-chat
+    runtime: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: FREEMODEL_API_KEY
+        sync: false
+      - key: REPLICATE_API_TOKEN
+        sync: false
